@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -11,14 +12,19 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+var top = cli.Top(nil)
+
 func main() {
-	cli.Add("create-db", cmdCreateDB, &createDBArgs{})
-	cli.Main()
+	os.Exit(top.Main(context.Background()))
 }
 
-type createDBArgs struct{}
+func init() {
+	top.Command("create-db", &createDBCmd{}, "create the database")
+}
 
-func cmdCreateDB(args *createDBArgs) error {
+type createDBCmd struct{}
+
+func (c *createDBCmd) Run(ctx context.Context) error {
 	dir := os.Getenv("GOECODIR")
 	if dir == "" {
 		return fmt.Errorf("GOECODIR environment variable not set")
