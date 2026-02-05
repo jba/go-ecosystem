@@ -2,11 +2,17 @@ package proxy
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"testing"
 )
 
+var live = flag.Bool("live", false, "run tests that make live network requests")
+
 func TestList(t *testing.T) {
+	if !*live {
+		t.Skip("skipping live test; use -live to run")
+	}
 	got, err := List(context.Background(), "github.com/jba/cli")
 	if err != nil {
 		t.Fatal(err)
@@ -14,9 +20,4 @@ func TestList(t *testing.T) {
 	for i, g := range got {
 		fmt.Printf("%d: %q\n", i, g)
 	}
-}
-
-func TestXXX(t *testing.T) {
-	got, err := Latest(context.Background(), "github.com/michael-go/migrate")
-	fmt.Println(got, err)
 }
