@@ -17,19 +17,19 @@ import (
 
 var Debug = false
 
-type IndexEntry struct {
+type Entry struct {
 	Path      string
 	Version   string
 	Timestamp string
 }
 
-// ReadIndex reads entries from index.golang.org.
+// Read reads entries from index.golang.org.
 //
 // since should either be the empty string or a value returned in the
-// Timestamp field of a previously read IndexEntry.
+// Timestamp field of a previously read Entry.
 //
 // The limit is passed on to the index unless it is zero.
-func ReadIndex(ctx context.Context, since string, limit int) ([]*IndexEntry, error) {
+func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 	url := "https://index.golang.org/index"
 	var params []string
 	if since != "" {
@@ -52,12 +52,12 @@ func ReadIndex(ctx context.Context, since string, limit int) ([]*IndexEntry, err
 	if err != nil {
 		return nil, err
 	}
-	var entries []*IndexEntry
+	var entries []*Entry
 	dec := json.NewDecoder(bytes.NewReader(body))
 	// The module index returns a stream of JSON objects formatted with newline
 	// as the delimiter.
 	for dec.More() {
-		var e IndexEntry
+		var e Entry
 		if err := dec.Decode(&e); err != nil {
 			return nil, fmt.Errorf("decoding JSON: %v", err)
 		}
@@ -66,16 +66,16 @@ func ReadIndex(ctx context.Context, since string, limit int) ([]*IndexEntry, err
 	return entries, nil
 }
 
-// IndexEntries returns an iterator over index entries since the given time, which should be the
-// empty string or a value from an [IndexEntry].
+// Entries returns an iterator over index entries since the given time, which should be the
+// empty string or a value from an [Entry].
 // It never returns the same entry twice, even if they have the same timestamp.
-func IndexEntries(ctx context.Context, since string) (iter.Seq[*IndexEntry], func() error) {
+func Entries(ctx context.Context, since string) (iter.Seq[*Entry], func() error) {
 	var es jiter.ErrorState
-	return func(yield func(*IndexEntry) bool) {
+	return func(yield func(*Entry) bool) {
 		defer es.Done()
-		prevs := map[IndexEntry]bool{} // previously seen entries at since.
+		prevs := map[Entry]bool{} // previously seen entries at since.
 		for {
-			entries, err := ReadIndex(ctx, since, 0)
+			entries, err := Read(ctx, since, 0)
 			if err != nil {
 				es.Set(err)
 				return
