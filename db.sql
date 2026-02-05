@@ -2,7 +2,7 @@ CREATE TABLE modules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path TEXT NOT NULL,
     state TEXT NOT NULL
-);
+) STRICT;
 
 CREATE TABLE packages (
     module_id INTEGER NOT NULL,
@@ -14,3 +14,4 @@ CREATE TABLE params (
     name TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+) STRICT;
