@@ -25,8 +25,8 @@ import (
 	"golang.org/x/mod/module"
 	"golang.org/x/time/rate"
 
-	"jba/work/lib/errs"
-	"jba/work/lib/httputil"
+	"github.com/jba/go-ecosystem/internal/errs"
+	"github.com/jba/go-ecosystem/internal/httputil"
 )
 
 var URL string = "https://proxy.golang.org"
