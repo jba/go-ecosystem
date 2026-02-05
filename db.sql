@@ -9,3 +9,8 @@ CREATE TABLE packages (
     relative_path TEXT NOT NULL,
     FOREIGN KEY (module_id) REFERENCES modules(id)
 );
+
+CREATE TABLE params (
+    name TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
