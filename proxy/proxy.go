@@ -25,7 +25,7 @@ import (
 	"golang.org/x/mod/module"
 	"golang.org/x/time/rate"
 
-	"go-ecosystem/internal/httputil"
+	"github.com/jba/go-ecosystem/internal/httputil"
 
 	"jba/work/lib/errs"
 )

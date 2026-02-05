@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"go-ecosystem/internal/httputil"
-	"go-ecosystem/internal/jiter"
+	"github.com/jba/go-ecosystem/internal/httputil"
+	"github.com/jba/go-ecosystem/internal/jiter"
 )
 
 type Entry struct {
