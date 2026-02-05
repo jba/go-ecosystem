@@ -7,15 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
-	"log"
 	"net/http"
 	"strings"
 
 	"jba/work/lib/httputil"
 	"jba/work/lib/jiter"
 )
-
-var Debug = false
 
 type Entry struct {
 	Path      string
@@ -40,9 +37,6 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 	}
 	if len(params) > 0 {
 		url += "?" + strings.Join(params, "&")
-	}
-	if Debug {
-		log.Printf("index: GET %s", url)
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
