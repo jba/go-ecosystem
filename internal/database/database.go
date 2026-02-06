@@ -8,9 +8,9 @@ import (
 	"github.com/jba/go-ecosystem/internal/jiter"
 )
 
-func ScanRows[T any](ctx context.Context, db *sql.DB, query string, params ...any) (iter.Seq[T], func() error) {
+func ScanRows(ctx context.Context, db *sql.DB, query string, params ...any) (iter.Seq[*sql.Rows], func() error) {
 	var es jiter.ErrorState
-	return func(yield func(T) bool) {
+	return func(yield func(*sql.Rows) bool) {
 		rows, err := db.QueryContext(ctx, query, params...)
 		if err != nil {
 			es.Set(err)
@@ -18,6 +18,19 @@ func ScanRows[T any](ctx context.Context, db *sql.DB, query string, params ...an
 		}
 		defer rows.Close()
 		for rows.Next() {
+			if !yield(rows) {
+				return
+			}
+		}
+		es.Set(rows.Err())
+	}, es.Func()
+}
+
+func ScanRowsOf[T any](ctx context.Context, db *sql.DB, query string, params ...any) (iter.Seq[T], func() error) {
+	var es jiter.ErrorState
+	return func(yield func(T) bool) {
+		iter, errf := ScanRows(ctx, db, query, params...)
+		for rows := range iter {
 			var x T
 			if err := rows.Scan(&x); err != nil {
 				es.Set(err)
@@ -27,6 +40,6 @@ func ScanRows[T any](ctx context.Context, db *sql.DB, query string, params ...an
 				return
 			}
 		}
-		es.Set(rows.Err())
+		es.Set(errf())
 	}, es.Func()
 }

@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
 )
 
 func init() {

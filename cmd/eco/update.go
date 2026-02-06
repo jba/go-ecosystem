@@ -25,6 +25,16 @@ func (c *updateCmd) Run(ctx context.Context) error {
 	db := openDB()
 	defer db.Close()
 
+	if err := c.updateFromIndex(ctx, db); err != nil {
+		return err
+	}
+	if err := c.updateLatestVersions(ctx, db); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB) error {
 	// Get the indexSince value from params table
 	var since string
 	err := db.QueryRowContext(ctx, "SELECT value FROM params WHERE name = 'indexSince'").Scan(&since)
@@ -105,7 +115,7 @@ func (c *updateCmd) Run(ctx context.Context) error {
 }
 
 func allModulePaths(ctx context.Context, db *sql.DB) (map[string]bool, error) {
-	iter, errf := database.ScanRows[string](ctx, db, "SELECT path FROM modules")
+	iter, errf := database.ScanRowsOf[string](ctx, db, "SELECT path FROM modules")
 	m := map[string]bool{}
 	for p := range iter {
 		m[p] = true
@@ -114,4 +124,8 @@ func allModulePaths(ctx context.Context, db *sql.DB) (map[string]bool, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *updateCmd) updateLatestVersions(ctx context.Context, db *sql.DB) error {
+	log.Printf("")
 }

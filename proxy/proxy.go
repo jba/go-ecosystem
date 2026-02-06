@@ -38,7 +38,7 @@ func init() {
 }
 
 const (
-	defaultMaxQPS = 50
+	defaultMaxQPS = 100
 	defaultBurst  = 10
 )
 
@@ -75,8 +75,6 @@ func ResetQPS() {
 	start = time.Time{}
 	mu.Unlock()
 }
-
-////////////////////////////////////////////////////////////////
 
 type InfoEntry struct {
 	Version string
@@ -212,8 +210,10 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 	return httputil.DoReadBody(req)
 }
 
-var cacheEnabled = false
-var cacheDir = filepath.Join(os.TempDir(), "goproxy-cache")
+var (
+	cacheEnabled = false
+	cacheDir     = filepath.Join(os.TempDir(), "goproxy-cache")
+)
 
 func init() {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
@@ -250,7 +250,7 @@ func fetchCached(ctx context.Context, surl string) ([]byte, error) {
 	if fetchErr != nil {
 		var herr *httputil.HTTPError
 		if errors.As(fetchErr, &herr) {
-			fileBytes = []byte(fmt.Sprintf("%d\n", herr.Status))
+			fileBytes = fmt.Appendf(nil, "%d\n", herr.Status)
 		} else {
 			return nil, fetchErr
 		}
@@ -264,4 +264,3 @@ func fetchCached(ctx context.Context, surl string) ([]byte, error) {
 	}
 	return bytes, fetchErr
 }
-

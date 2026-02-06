@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/jba/cli"
+	"github.com/jba/go-ecosystem/ecodb"
 	_ "modernc.org/sqlite"
 )
 
@@ -18,16 +18,9 @@ func main() {
 }
 
 func openDB() *sql.DB {
-	dir := os.Getenv("GOECODIR")
-	if dir == "" {
-		log.Fatal("GOECODIR environment variable not set")
-	}
-
-	dbPath := filepath.Join(dir, "db.sqlite")
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := ecodb.Open()
 	if err != nil {
-		log.Fatalf("opening database %s: %w", dbPath, err)
+		log.Fatalf("%s", err)
 	}
-	log.Printf("opened DB at %s", dbPath)
 	return db
 }
