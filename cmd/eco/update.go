@@ -29,24 +29,6 @@ func (c *updateCmd) Run(ctx context.Context) error {
 	db := openDB()
 	defer db.Close()
 
-	if err := c.updateFromIndex(ctx, db); err != nil {
-		return err
-	}
-	// if err := c.updateLatestVersions(ctx, db); err != nil {
-	// 	return err
-	// }
-	return nil
-}
-
-func reportProgressWithProxy(i progress.Info) {
-	var qs string
-	if q := proxy.QPS(); q > 0 {
-		qs = fmt.Sprintf(", proxy QPS = %.1f", q)
-	}
-	log.Printf("%s%s", i, qs)
-}
-
-func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB) error {
 	// Read all modules into memory.
 	start := time.Now()
 	mods, err := allModules(ctx, db)
@@ -55,9 +37,35 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB) error {
 	}
 	log.Printf("read %d modules from DB in %.1fs", len(mods), time.Since(start).Seconds())
 
+	if err := c.updateFromIndex(ctx, db, mods); err != nil {
+		return err
+	}
+	// if err := c.updateLatestVersions(ctx, db); err != nil {
+	// 	return err
+	// }
+	return nil
+}
+
+func allModules(ctx context.Context, db *sql.DB) (map[string]*ecodb.Module, error) {
+	iter, errf := database.ScanRows(ctx, db, "SELECT * FROM modules")
+	mods := map[string]*ecodb.Module{}
+	for r := range iter {
+		m, err := ecodb.ScanModule(r)
+		if err != nil {
+			return nil, err
+		}
+		mods[m.Path] = m
+	}
+	if err := errf(); err != nil {
+		return nil, err
+	}
+	return mods, nil
+}
+
+func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[string]*ecodb.Module) error {
 	// Get the indexSince value from params table.
 	var since string
-	err = db.QueryRowContext(ctx, "SELECT value FROM params WHERE name = 'indexSince'").Scan(&since)
+	err := db.QueryRowContext(ctx, "SELECT value FROM params WHERE name = 'indexSince'").Scan(&since)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("querying indexSince: %w", err)
 	}
@@ -194,20 +202,12 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func allModules(ctx context.Context, db *sql.DB) (map[string]*ecodb.Module, error) {
-	iter, errf := database.ScanRows(ctx, db, "SELECT * FROM modules")
-	mods := map[string]*ecodb.Module{}
-	for r := range iter {
-		m, err := ecodb.ScanModule(r)
-		if err != nil {
-			return nil, err
-		}
-		mods[m.Path] = m
+func reportProgressWithProxy(i progress.Info) {
+	var qs string
+	if q := proxy.QPS(); q > 0 {
+		qs = fmt.Sprintf(", proxy QPS = %.1f", q)
 	}
-	if err := errf(); err != nil {
-		return nil, err
-	}
-	return mods, nil
+	log.Printf("%s%s", i, qs)
 }
 
 func (c *updateCmd) updateLatestVersions(ctx context.Context, db *sql.DB) error {
