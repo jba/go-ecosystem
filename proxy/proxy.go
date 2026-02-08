@@ -1,7 +1,6 @@
 // Package proxy supports queries on the Go module proxy.
-// It always sets the Disable-Module-Fetch header to true,
-// and it always throttles requests to a configured QPS.
-
+// It only accesses cached modules, and throttles requests to a configured
+// QPS.
 package proxy
 
 import (
@@ -29,15 +28,8 @@ import (
 	"github.com/jba/go-ecosystem/internal/httputil"
 )
 
-var URL string = "https://proxy.golang.org"
-
-func init() {
-	if u := os.Getenv("GOPROXY"); u != "" {
-		URL = u
-	}
-}
-
 const (
+	proxyURL      = "https://proxy.golang.org/cached-only"
 	defaultMaxQPS = 100
 	defaultBurst  = 10
 )
@@ -170,7 +162,7 @@ func proxyPathURL(modPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return URL + "/" + epath, nil
+	return proxyURL + "/" + epath, nil
 }
 
 func proxyVersionURL(modPath, version, suffix string) (string, error) {

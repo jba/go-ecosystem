@@ -1,8 +1,14 @@
+-- avoid nulls to simplify interoperation with Go
+
 CREATE TABLE modules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    path TEXT NOT NULL UNIQUE,
-    state TEXT NOT NULL
-) STRICT;
+    id             INTEGER PRIMARY KEY,
+    path           TEXT NOT NULL UNIQUE,
+    error          TEXT NOT NULL,
+    latest_version TEXT NOT NULL,
+    info_time      TEXT NOT NULL
+);
+
+-- TODO: make modules strict
 
 CREATE TABLE packages (
     module_id INTEGER NOT NULL,
@@ -12,6 +18,6 @@ CREATE TABLE packages (
 );
 
 CREATE TABLE params (
-    name TEXT PRIMARY KEY,
+    name  TEXT PRIMARY KEY,
     value TEXT NOT NULL
 ) STRICT;

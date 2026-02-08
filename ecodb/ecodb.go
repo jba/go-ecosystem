@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func Open() (*sql.DB, error) {
@@ -22,33 +23,49 @@ func Open() (*sql.DB, error) {
 	return db, nil
 }
 
+// A Module is information about a Go module
+// known to the proxy.
+//
+// If only Path is non-empty, the module has been seen in the index only.
+// ID == 0 => not inserted.
 type Module struct {
 	ID            int64
 	Path          string
-	State         string
+	Error         string
 	LatestVersion string
 	InfoTime      string // from proxy info
-	Origin        string // JSON of proxy.Origin
-	Error         string
 }
+
+var moduleCols = []string{"id", "path", "error", "latest_version", "info_time"}
+
+var moduleSelectStmt = "SELECT " + cols(moduleCols) + " FROM modules"
 
 func ScanModule(rows *sql.Rows) (*Module, error) {
 	var m Module
-	var lv, er, it, or sql.NullString
-	if err := rows.Scan(&m.ID, &m.Path, &m.State, &lv, &er, &it, &or); err != nil {
+	// order must match moduleColumns
+	if err := rows.Scan(&m.ID, &m.Path, &m.Error, &m.LatestVersion, &m.InfoTime); err != nil {
 		return nil, err
 	}
-	if lv.Valid {
-		m.LatestVersion = lv.String
-	}
-	if er.Valid {
-		m.Error = er.String
-	}
-	if it.Valid {
-		m.InfoTime = it.String
-	}
-	if or.Valid {
-		m.Origin = or.String
-	}
 	return &m, nil
+}
+
+var ModuleInsertStmt = "INSERT INTO modules " + cols(moduleCols[1:]) + " VALUES " + qmarks(len(moduleCols)-1)
+
+var ModuleUpdateStmt = "UPDATE modules SET " + cols(moduleCols[2:]) + " = " + qmarks(len(moduleCols)-2) +
+	" WHERE path = ?"
+
+func (m *Module) InsertArgs() []any {
+	return []any{m.Path, m.Error, m.LatestVersion, m.InfoTime}
+}
+
+func (m *Module) UpdateArgs() []any {
+	return []any{m.Error, m.LatestVersion, m.InfoTime, m.Path}
+}
+
+func cols(cols []string) string {
+	return "(" + strings.Join(cols, ", ") + ")"
+}
+
+func qmarks(n int) string {
+	return "(" + strings.Repeat("?, ", n-1) + "?)"
 }

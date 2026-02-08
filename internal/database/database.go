@@ -43,3 +43,15 @@ func ScanRowsOf[T any](ctx context.Context, db *sql.DB, query string, params ...
 		es.Set(errf())
 	}, es.Func()
 }
+
+func Transaction(db *sql.DB, f func(*sql.Tx) error) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := f(tx); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
