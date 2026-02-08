@@ -37,18 +37,21 @@ func latestModuleVersion(ctx context.Context, modulePath string) (_ string, err 
 	if err != nil {
 		return "", err
 	}
-	latest, err := proxy.Latest(ctx, modulePath)
-	if httputil.ErrorStatus(err) == http.StatusNotFound {
-		// No information from the proxy, but not a showstopper either; we can
-		// proceed with the result of the list endpoint.
-	} else if err != nil {
-		return "", err
-	} else {
-		allVersions = append(allVersions, latest)
-	}
+	// Only call latest if there no versions in the list.
+	// This saves a latest call, but in theory (I think) the highest
+	// version in the list is retracted and then the latest endpoint
+	// may come into play. Ignore those cases.
 	if len(allVersions) == 0 {
-		// No tagged versions, and nothing from @latest: no version information.
-		return "", errNoVersions
+		latest, err := proxy.Latest(ctx, modulePath)
+		if httputil.ErrorStatus(err) == http.StatusNotFound {
+			// No information version information from the proxy.
+			// There may be pseudo-versions out there, but we can't learn about them.
+			return "", errNoVersions
+		}
+		if err != nil {
+			return "", err
+		}
+		allVersions = []string{latest}
 	}
 
 	seen := map[string]bool{}

@@ -82,6 +82,7 @@ type Origin struct {
 }
 
 func Info(ctx context.Context, path, version string) (_ *InfoEntry, err error) {
+	debugf("Info %s %s", path, version)
 	defer errs.Wrap(&err, "proxy.Info(%q, %q)", path, version)
 	url, err := proxyVersionURL(path, version, ".info")
 	if err != nil {
@@ -91,6 +92,7 @@ func Info(ctx context.Context, path, version string) (_ *InfoEntry, err error) {
 }
 
 func Latest(ctx context.Context, path string) (_ string, err error) {
+	debugf("Latest %s", path)
 	defer errs.Wrap(&err, "proxy.Latest(%q)", path)
 	url, err := proxyPathURL(path)
 	if err != nil {
@@ -117,6 +119,7 @@ func fetchInfoEntry(ctx context.Context, url string) (*InfoEntry, error) {
 }
 
 func Mod(ctx context.Context, path, version string) (_ []byte, err error) {
+	debugf("Mod %s %s", path, version)
 	defer errs.Wrap(&err, "proxy.Mod(%q, %q)", path, version)
 	url, err := proxyVersionURL(path, version, ".mod")
 	if err != nil {
@@ -126,6 +129,7 @@ func Mod(ctx context.Context, path, version string) (_ []byte, err error) {
 }
 
 func List(ctx context.Context, path string) (_ []string, err error) {
+	debugf("List %s", path)
 	defer errs.Wrap(&err, "proxy.List(%q)", path)
 	url, err := proxyPathURL(path)
 	if err != nil {
@@ -255,4 +259,10 @@ func fetchCached(ctx context.Context, surl string) ([]byte, error) {
 		}
 	}
 	return bytes, fetchErr
+}
+
+var debugf func(format string, args ...any) = func(format string, args ...any) {}
+
+func logDebugf(format string, args ...any) {
+	log.Printf("proxy: "+format, args...)
 }

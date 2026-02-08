@@ -3,15 +3,20 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"slices"
 	"time"
 
 	"github.com/jba/go-ecosystem/ecodb"
 	"github.com/jba/go-ecosystem/index"
 	"github.com/jba/go-ecosystem/internal/database"
+	"github.com/jba/go-ecosystem/internal/httputil"
 	"github.com/jba/go-ecosystem/internal/progress"
 	"github.com/jba/go-ecosystem/proxy"
+	"golang.org/x/sync/errgroup"
 	_ "modernc.org/sqlite"
 )
 
@@ -71,8 +76,8 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 	// Read the index.
 	log.Printf("reading index from %s", since)
 
-	// Collect paths and track the latest timestamp
-	var newPaths []string
+	// Collect unique paths and track the latest timestamp
+	seen := map[string]bool{}
 	var latestTimestamp string
 	deadline := time.Now().Add(c.Duration)
 
@@ -81,27 +86,46 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 		if time.Now().After(deadline) {
 			break
 		}
-		if mods[e.Path] == nil {
-			mods[e.Path] = &ecodb.Module{Path: e.Path}
-			newPaths = append(newPaths, e.Path)
-		}
+		seen[e.Path] = true
 		latestTimestamp = e.Timestamp
 	}
 	if err := errf(); err != nil {
 		return fmt.Errorf("reading index: %w", err)
 	}
-
-	log.Printf("saw %d new paths in index in %s", len(newPaths), c.Duration)
+	log.Printf("saw %d unique paths in index in %s", len(seen), c.Duration)
 
 	// Write the new modules.
+	nInserts := 0
+	nUpdates := 0
+	start := time.Now()
 	err = database.Transaction(db, func(tx *sql.Tx) error {
-		stmt, err := tx.PrepareContext(ctx, ecodb.ModuleInsertStmt)
+		insert, err := tx.PrepareContext(ctx, ecodb.ModuleInsertStmt)
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
-		for _, p := range newPaths {
-			if _, err := stmt.ExecContext(ctx, mods[p].InsertArgs()...); err != nil {
+		defer insert.Close()
+		update, err := tx.PrepareContext(ctx, ecodb.ModuleUpdateStmt)
+		if err != nil {
+			return err
+		}
+		defer update.Close()
+
+		for p := range seen {
+			// NOTE: this loses the IDs of all existing mods in seen.
+			_, inDB := mods[p]
+			// If the mod is in the DB, this will effectively clear out all other columns.
+			m := &ecodb.Module{Path: p}
+			mods[p] = m
+			var err error
+			if inDB {
+				// This path is in the DB, but since we saw it again in the index, redo everything.
+				nUpdates++
+				_, err = update.ExecContext(ctx, m.UpdateArgs()...)
+			} else {
+				nInserts++
+				_, err = insert.ExecContext(ctx, m.InsertArgs()...)
+			}
+			if err != nil {
 				return err
 			}
 		}
@@ -110,6 +134,7 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 	if err != nil {
 		return err
 	}
+	log.Printf("%d inserts and %d updates in %.1fs", nInserts, nUpdates, time.Since(start).Seconds())
 
 	// Write the latest timestamp to params table
 	if latestTimestamp != "" {
@@ -125,11 +150,80 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 }
 
 func (c *updateCmd) updateFromProxy(ctx context.Context, db *sql.DB, mods map[string]*ecodb.Module) error {
+	// Collect the modules that need information from the proxy.
+	// We collect first so we can report accurate progress.
+	var toUpdate []*ecodb.Module
+	for _, m := range mods {
+		if m.Error == "" && (m.LatestVersion == "" || m.InfoTime == "") {
+			toUpdate = append(toUpdate, m)
+		}
+	}
+	log.Printf("%d modules to update", len(toUpdate))
+	p := progress.Start(len(toUpdate), 10*time.Second, reportProgressWithProxy)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(4)
+	for chunk := range slices.Chunk(toUpdate, 100) {
+		g.Go(func() error {
+			for _, mod := range chunk {
+				if err := populateModuleFromProxy(gctx, mod); err != nil {
+					return err
+				}
+				p.Did(1)
+			}
+			return nil
+		})
+		// Update the DB for this chunk.
+		log.Printf("updating DB with %d changes", len(chunk))
+		err := database.Transaction(db, func(tx *sql.Tx) error {
+			update, err := tx.PrepareContext(ctx, ecodb.ModuleUpdateStmt)
+			if err != nil {
+				return err
+			}
+			defer update.Close()
+			for _, mod := range chunk {
+				if _, err := update.ExecContext(ctx, mod.UpdateArgs()...); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		log.Printf("updated DB")
+	}
 	return nil
 }
 
-// 	var inserts, updates []*ecodb.Module
-// 	p := progress.Start(len(seen), 10*time.Second, reportProgressWithProxy)
+func populateModuleFromProxy(ctx context.Context, mod *ecodb.Module) error {
+	if mod.LatestVersion == "" {
+		latestVersion, err := latestModuleVersion(ctx, mod.Path)
+		if err != nil {
+			if errors.Is(err, errNoVersions) || isNotFound(err) {
+				mod.Error = err.Error()
+			} else {
+				return err
+			}
+		} else {
+			mod.LatestVersion = latestVersion
+		}
+	}
+	if mod.LatestVersion != "" {
+		info, err := proxy.Info(ctx, mod.Path, mod.LatestVersion)
+		if err != nil {
+			return err
+		}
+		mod.InfoTime = info.Time
+	}
+	return nil
+}
+
+func isNotFound(err error) bool {
+	s := httputil.ErrorStatus(err)
+	return s == http.StatusNotFound || s == http.StatusGone
+}
+
 // 	for path := range seen {
 // 		mod := mods[path]
 // 		latestVersion, err := latestModuleVersion(ctx, path)
