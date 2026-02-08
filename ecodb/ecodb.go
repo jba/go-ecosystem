@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 func Open() (*sql.DB, error) {
@@ -28,14 +27,28 @@ type Module struct {
 	Path          string
 	State         string
 	LatestVersion string
-	InfoTime      time.Time // from proxy info
+	InfoTime      string // from proxy info
+	Origin        string // JSON of proxy.Origin
 	Error         string
 }
 
-func scanModule(rows *sql.Rows) (*Module, error) {
+func ScanModule(rows *sql.Rows) (*Module, error) {
 	var m Module
-	if err := rows.Scan(&m.ID, &m.Path, &m.State, &m.LatestVersion, &m.Error, &m.InfoTime); err != nil {
+	var lv, er, it, or sql.NullString
+	if err := rows.Scan(&m.ID, &m.Path, &m.State, &lv, &er, &it, &or); err != nil {
 		return nil, err
+	}
+	if lv.Valid {
+		m.LatestVersion = lv.String
+	}
+	if er.Valid {
+		m.Error = er.String
+	}
+	if it.Valid {
+		m.InfoTime = it.String
+	}
+	if or.Valid {
+		m.Origin = or.String
 	}
 	return &m, nil
 }

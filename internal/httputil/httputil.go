@@ -2,6 +2,7 @@
 package httputil
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,7 +19,8 @@ func (e *HTTPError) Error() string {
 
 // -1 if not an HTTPError
 func ErrorStatus(err error) int {
-	if he, ok := err.(*HTTPError); ok {
+	var he *HTTPError
+	if errors.As(err, &he) {
 		return he.Status
 	}
 	return -1

@@ -51,7 +51,12 @@ func latestModuleVersion(ctx context.Context, modulePath string) (_ string, err 
 		return "", errNoVersions
 	}
 
+	seen := map[string]bool{}
 	hasGoMod := func(version string) (bool, error) {
+		if seen[version] {
+			log.Printf("!!! %s saw version %s twice for mod endpoint", modulePath, version)
+		}
+		seen[version] = true
 		goModBytes, err := proxy.Mod(ctx, modulePath, version)
 		if err != nil {
 			return false, err
