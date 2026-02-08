@@ -74,6 +74,7 @@ func latestModuleVersion(ctx context.Context, modulePath string) (_ string, err 
 	if err != nil {
 		return "", err
 	}
+	log.Printf("rawLatest = %s", rawLatest)
 	// Get the go.mod file at the raw latest version.
 	modBytes, err := proxy.Mod(ctx, modulePath, rawLatest)
 	if err != nil {
@@ -81,7 +82,7 @@ func latestModuleVersion(ctx context.Context, modulePath string) (_ string, err 
 	}
 	modFile, err := modfile.ParseLax(fmt.Sprintf("%s@%s/go.mod", modulePath, rawLatest), modBytes, nil)
 	if err != nil {
-		log.Printf("bad go.mod file: %v", err)
+		log.Printf("latestModuleVersion: using raw latest because bad go.mod file: %v", err)
 		return rawLatest, nil
 		// return "", err
 	}

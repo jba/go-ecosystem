@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"slices"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jba/go-ecosystem/ecodb"
@@ -26,9 +27,19 @@ func init() {
 
 type updateCmd struct {
 	Duration time.Duration
+	Module   string `cli:"flag=mod"`
 }
 
 func (c *updateCmd) Run(ctx context.Context) error {
+	if c.Module != "" {
+		m := &ecodb.Module{Path: c.Module}
+		if err := populateModuleFromProxy(ctx, m); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%+v\n", m)
+		return nil
+	}
+
 	db := openDB()
 	defer db.Close()
 
@@ -161,38 +172,40 @@ func (c *updateCmd) updateFromProxy(ctx context.Context, db *sql.DB, mods map[st
 	log.Printf("%d modules to update", len(toUpdate))
 	p := progress.Start(len(toUpdate), 10*time.Second, reportProgressWithProxy)
 
+	proxy.SetMaxQPS(300)
+
 	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(4)
-	for chunk := range slices.Chunk(toUpdate, 100) {
+	g.SetLimit(10)
+
+	// sqlite can only do one write at a time
+	var mu sync.Mutex
+
+	var proxyDur, dbDur atomic.Int64
+
+	for _, mod := range toUpdate {
 		g.Go(func() error {
-			for _, mod := range chunk {
-				if err := populateModuleFromProxy(gctx, mod); err != nil {
-					return err
-				}
-				p.Did(1)
-			}
-			return nil
-		})
-		// Update the DB for this chunk.
-		log.Printf("updating DB with %d changes", len(chunk))
-		err := database.Transaction(db, func(tx *sql.Tx) error {
-			update, err := tx.PrepareContext(ctx, ecodb.ModuleUpdateStmt)
-			if err != nil {
+			start := time.Now()
+			if err := populateModuleFromProxy(gctx, mod); err != nil {
 				return err
 			}
-			defer update.Close()
-			for _, mod := range chunk {
-				if _, err := update.ExecContext(ctx, mod.UpdateArgs()...); err != nil {
-					return err
-				}
+			proxyDur.Add(time.Since(start).Nanoseconds())
+			start = time.Now()
+			mu.Lock()
+			if _, err := db.ExecContext(gctx, ecodb.ModuleUpdateStmt, mod.UpdateArgs()...); err != nil {
+				mu.Unlock()
+				return err
 			}
+			mu.Unlock()
+			dbDur.Add(time.Since(start).Nanoseconds())
+			p.Did(1)
 			return nil
 		})
-		if err != nil {
-			return err
-		}
-		log.Printf("updated DB")
 	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	log.Printf("proxy: %.1fs, db: %.1fs", time.Duration(proxyDur.Load()).Seconds(),
+		time.Duration(dbDur.Load()).Seconds())
 	return nil
 }
 
@@ -223,100 +236,6 @@ func isNotFound(err error) bool {
 	s := httputil.ErrorStatus(err)
 	return s == http.StatusNotFound || s == http.StatusGone
 }
-
-// 	for path := range seen {
-// 		mod := mods[path]
-// 		latestVersion, err := latestModuleVersion(ctx, path)
-// 		if err != nil {
-// 			if errors.Is(err, errNoVersions) {
-// 				if mod == nil {
-// 					inserts = append(inserts, &ecodb.Module{Path: path, Error: err.Error()})
-// 				} else {
-// 					mod.Error = err.Error()
-// 					updates = append(updates, mod)
-// 				}
-// 			} else {
-// 				return err
-// 			}
-// 		} else if mod != nil && mod.LatestVersion == latestVersion && mod.InfoTime != "" {
-// 			// The InfoTime check is temporary, while the DB has rows inserted before this logic.
-// 			// do nothing
-// 		} else {
-// 			// Get info for this version.
-// 			info, err := proxy.Info(ctx, path, latestVersion)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			// insert/update all info
-// 			if mod == nil {
-// 				mod = &ecodb.Module{Path: path}
-// 				inserts = append(inserts, mod)
-// 			} else {
-// 				updates = append(updates, mod)
-// 			}
-// 			mod.LatestVersion = latestVersion
-// 			mod.InfoTime = info.Time
-// 		}
-// 		p.Did(1)
-// 	}
-// 	log.Printf("inserting %d modules, updating %d", len(inserts), len(updates))
-
-// 	p = progress.Start(len(inserts)+len(updates), 10*time.Second, nil)
-// 	tx, err := db.Begin()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer tx.Rollback()
-// 	stmt, err := tx.PrepareContext(ctx, `
-// 		INSERT INTO modules
-// 		(path, latest_version, info_time, origin)
-// 		VALUES (?, ?, ?, ?)`)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer stmt.Close()
-// 	for _, mod := range inserts {
-// 		if _, err := stmt.ExecContext(ctx, mod.Path, mod.LatestVersion, mod.InfoTime); err != nil {
-// 			return fmt.Errorf("inserting module %s: %w", mod.Path, err)
-// 		}
-// 		p.Did(1)
-// 	}
-
-// 	noErrorStmt, err := tx.PrepareContext(ctx, `
-// 		UPDATE modules
-// 		SET (latest_version, info_time, origin, error) = (?, ?, ?, NULL)
-// 		WHERE path = ?`)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	errorStmt, err := tx.PrepareContext(ctx, `
-// 		UPDATE modules
-// 		SET (latest_version, info_time, origin, error) = (NULL, NULL, NULL, ?)
-// 		WHERE path = ?`)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer stmt.Close()
-// 	for _, mod := range updates {
-// 		var err error
-// 		if mod.Error == "" {
-// 			_, err = noErrorStmt.ExecContext(ctx, mod.LatestVersion, mod.InfoTime, mod.Path)
-// 		} else {
-// 			_, err = errorStmt.ExecContext(ctx, mod.Error, mod.Path)
-// 		}
-// 		if err != nil {
-// 			return err
-// 		}
-// 		p.Did(1)
-// 	}
-
-// 	if err := tx.Commit(); err != nil {
-// 		return err
-// 	}
-// 	log.Printf("read index to %s", latestTimestamp)
-
-// 	return nil
-// }
 
 func reportProgressWithProxy(i progress.Info) {
 	var qs string
