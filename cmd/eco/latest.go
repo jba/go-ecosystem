@@ -74,7 +74,6 @@ func latestModuleVersion(ctx context.Context, modulePath string) (_ string, err 
 	if err != nil {
 		return "", err
 	}
-	log.Printf("rawLatest = %s", rawLatest)
 	// Get the go.mod file at the raw latest version.
 	modBytes, err := proxy.Mod(ctx, modulePath, rawLatest)
 	if err != nil {

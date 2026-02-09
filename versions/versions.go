@@ -75,7 +75,6 @@ func Latest(versions []string, hasGoMod func(v string) (bool, error)) (v string,
 	if latest == "" {
 		return "", nil
 	}
-	log.Printf("Latest: latest=%s", latest)
 	// If the latest is a compatible version, use it.
 	if !IsIncompatible(latest) {
 		return latest, nil

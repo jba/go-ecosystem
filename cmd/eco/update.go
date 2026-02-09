@@ -54,7 +54,7 @@ func (c *updateCmd) Run(ctx context.Context) error {
 	if err := c.updateFromIndex(ctx, db, mods); err != nil {
 		return err
 	}
-	if err := c.updateFromProxy(ctx, db, mods); err != nil {
+	if err := c.updateModuleFromProxy(ctx, db, mods); err != nil {
 		return err
 	}
 	return nil
@@ -122,22 +122,27 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 		defer update.Close()
 
 		for p := range seen {
-			// NOTE: this loses the IDs of all existing mods in seen.
-			_, inDB := mods[p]
+			mod, inDB := mods[p]
 			// If the mod is in the DB, this will effectively clear out all other columns.
-			m := &ecodb.Module{Path: p}
-			mods[p] = m
-			var err error
 			if inDB {
 				// This path is in the DB, but since we saw it again in the index, redo everything.
+				mod = &ecodb.Module{ID: mod.ID, Path: mod.Path}
 				nUpdates++
-				_, err = update.ExecContext(ctx, m.UpdateArgs()...)
+				if _, err := update.ExecContext(ctx, mod.UpdateArgs()...); err != nil {
+					return err
+				}
 			} else {
+				mod = &ecodb.Module{Path: p}
+				mods[p] = mod
 				nInserts++
-				_, err = insert.ExecContext(ctx, m.InsertArgs()...)
-			}
-			if err != nil {
-				return err
+				res, err := insert.ExecContext(ctx, mod.InsertArgs()...)
+				if err != nil {
+					return err
+				}
+				mod.ID, err = res.LastInsertId()
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -147,7 +152,7 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 	}
 	log.Printf("%d inserts and %d updates in %.1fs", nInserts, nUpdates, time.Since(start).Seconds())
 
-	// Write the latest timestamp to params table
+	// Write the latest timestamp to params table.
 	if latestTimestamp != "" {
 		_, err = db.ExecContext(ctx,
 			"INSERT INTO params (name, value) VALUES ('indexSince', ?) ON CONFLICT(name) DO UPDATE SET value = ?",
@@ -160,7 +165,7 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 	return nil
 }
 
-func (c *updateCmd) updateFromProxy(ctx context.Context, db *sql.DB, mods map[string]*ecodb.Module) error {
+func (c *updateCmd) updateModuleFromProxy(ctx context.Context, db *sql.DB, mods map[string]*ecodb.Module) error {
 	// Collect the modules that need information from the proxy.
 	// We collect first so we can report accurate progress.
 	var toUpdate []*ecodb.Module
