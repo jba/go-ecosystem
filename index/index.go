@@ -67,10 +67,15 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 // empty string or a value from an [Entry].
 // It never returns the same entry twice, even if they have the same timestamp.
 // If an error occurs, the iterator yields a nil [Entry] with a non-nil error and stops.
-//
-// limit is the number of entries to request per page; if it is zero, the
-// index's default page size is used.
-func Entries(ctx context.Context, since string, limit int) iter.Seq2[*Entry, error] {
+func Entries(ctx context.Context, since string) iter.Seq2[*Entry, error] {
+	return entries(ctx, since, 0)
+}
+
+// entries is the implementation of [Entries], with an additional limit
+// parameter giving the number of entries to request per page. If limit is
+// zero, the index's default page size is used. It exists so tests can use a
+// small page size.
+func entries(ctx context.Context, since string, limit int) iter.Seq2[*Entry, error] {
 	return func(yield func(*Entry, error) bool) {
 		prevs := map[Entry]bool{} // previously seen entries at since.
 		for {

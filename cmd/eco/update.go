@@ -92,7 +92,7 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 	var latestTimestamp string
 	deadline := time.Now().Add(c.Duration)
 
-	for e, err := range index.Entries(ctx, since, 0) {
+	for e, err := range index.Entries(ctx, since) {
 		if err != nil {
 			return fmt.Errorf("reading index: %w", err)
 		}

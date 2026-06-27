@@ -55,7 +55,7 @@ func TestEntries(t *testing.T) {
 	const pageSize = 100
 	const want = 250 // forces at least three pages
 	n := 0
-	for e, err := range Entries(context.Background(), "", pageSize) {
+	for e, err := range entries(context.Background(), "", pageSize) {
 		if err != nil {
 			t.Fatal(err)
 		}
