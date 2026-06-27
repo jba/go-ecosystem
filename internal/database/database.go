@@ -4,44 +4,50 @@ import (
 	"context"
 	"database/sql"
 	"iter"
-
-	"github.com/jba/go-ecosystem/internal/jiter"
 )
 
-func ScanRows(ctx context.Context, db *sql.DB, query string, params ...any) (iter.Seq[*sql.Rows], func() error) {
-	var es jiter.ErrorState
-	return func(yield func(*sql.Rows) bool) {
+// ScanRows runs the query and returns an iterator over the resulting rows.
+// If an error occurs, the iterator yields a nil *sql.Rows with a non-nil
+// error and stops.
+func ScanRows(ctx context.Context, db *sql.DB, query string, params ...any) iter.Seq2[*sql.Rows, error] {
+	return func(yield func(*sql.Rows, error) bool) {
 		rows, err := db.QueryContext(ctx, query, params...)
 		if err != nil {
-			es.Set(err)
+			yield(nil, err)
 			return
 		}
 		defer rows.Close()
 		for rows.Next() {
-			if !yield(rows) {
+			if !yield(rows, nil) {
 				return
 			}
 		}
-		es.Set(rows.Err())
-	}, es.Func()
+		if err := rows.Err(); err != nil {
+			yield(nil, err)
+		}
+	}
 }
 
-func ScanRowsOf[T any](ctx context.Context, db *sql.DB, query string, params ...any) (iter.Seq[T], func() error) {
-	var es jiter.ErrorState
-	return func(yield func(T) bool) {
-		iter, errf := ScanRows(ctx, db, query, params...)
-		for rows := range iter {
+// ScanRowsOf runs the query and returns an iterator over rows scanned into
+// values of type T. If an error occurs, the iterator yields the zero value of
+// T with a non-nil error and stops.
+func ScanRowsOf[T any](ctx context.Context, db *sql.DB, query string, params ...any) iter.Seq2[T, error] {
+	return func(yield func(T, error) bool) {
+		for rows, err := range ScanRows(ctx, db, query, params...) {
 			var x T
-			if err := rows.Scan(&x); err != nil {
-				es.Set(err)
+			if err != nil {
+				yield(x, err)
 				return
 			}
-			if !yield(x) {
+			if err := rows.Scan(&x); err != nil {
+				yield(x, err)
+				return
+			}
+			if !yield(x, nil) {
 				return
 			}
 		}
-		es.Set(errf())
-	}, es.Func()
+	}
 }
 
 func Transaction(db *sql.DB, f func(*sql.Tx) error) error {

@@ -61,17 +61,16 @@ func (c *updateCmd) Run(ctx context.Context) error {
 }
 
 func allModules(ctx context.Context, db *sql.DB) (map[string]*ecodb.Module, error) {
-	iter, errf := database.ScanRows(ctx, db, "SELECT * FROM modules")
 	mods := map[string]*ecodb.Module{}
-	for r := range iter {
+	for r, err := range database.ScanRows(ctx, db, "SELECT * FROM modules") {
+		if err != nil {
+			return nil, err
+		}
 		m, err := ecodb.ScanModule(r)
 		if err != nil {
 			return nil, err
 		}
 		mods[m.Path] = m
-	}
-	if err := errf(); err != nil {
-		return nil, err
 	}
 	return mods, nil
 }
