@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/jba/go-ecosystem/internal/httputil"
-	"github.com/jba/go-ecosystem/internal/jiter"
 )
 
 type Entry struct {
@@ -63,15 +62,14 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 // Entries returns an iterator over index entries since the given time, which should be the
 // empty string or a value from an [Entry].
 // It never returns the same entry twice, even if they have the same timestamp.
-func Entries(ctx context.Context, since string) (iter.Seq[*Entry], func() error) {
-	var es jiter.ErrorState
-	return func(yield func(*Entry) bool) {
-		defer es.Done()
+// If an error occurs, the iterator yields a nil [Entry] with a non-nil error and stops.
+func Entries(ctx context.Context, since string) iter.Seq2[*Entry, error] {
+	return func(yield func(*Entry, error) bool) {
 		prevs := map[Entry]bool{} // previously seen entries at since.
 		for {
 			entries, err := Read(ctx, since, 0)
 			if err != nil {
-				es.Set(err)
+				yield(nil, err)
 				return
 			}
 			n := 0
@@ -79,7 +77,7 @@ func Entries(ctx context.Context, since string) (iter.Seq[*Entry], func() error)
 				if prevs[*e] {
 					continue
 				}
-				if !yield(e) {
+				if !yield(e, nil) {
 					return
 				}
 				n++
@@ -97,5 +95,5 @@ func Entries(ctx context.Context, since string) (iter.Seq[*Entry], func() error)
 				prevs[*entries[i]] = true
 			}
 		}
-	}, es.Func()
+	}
 }

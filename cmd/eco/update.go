@@ -92,16 +92,15 @@ func (c *updateCmd) updateFromIndex(ctx context.Context, db *sql.DB, mods map[st
 	var latestTimestamp string
 	deadline := time.Now().Add(c.Duration)
 
-	entries, errf := index.Entries(ctx, since)
-	for e := range entries {
+	for e, err := range index.Entries(ctx, since) {
+		if err != nil {
+			return fmt.Errorf("reading index: %w", err)
+		}
 		if time.Now().After(deadline) {
 			break
 		}
 		seen[e.Path] = true
 		latestTimestamp = e.Timestamp
-	}
-	if err := errf(); err != nil {
-		return fmt.Errorf("reading index: %w", err)
 	}
 	log.Printf("saw %d unique paths in index in %s", len(seen), c.Duration)
 
