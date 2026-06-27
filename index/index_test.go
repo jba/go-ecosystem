@@ -50,9 +50,12 @@ func TestEntries(t *testing.T) {
 	withReplayClient(t, "testdata/entries.httprr")
 
 	seen := map[Entry]bool{}
-	const want = 2500 // more than one index page (the index caps pages at 2000)
+	// Page 100 at a time so the test exercises pagination across several
+	// requests without recording a huge trace.
+	const pageSize = 100
+	const want = 250 // forces at least three pages
 	n := 0
-	for e, err := range Entries(context.Background(), "") {
+	for e, err := range Entries(context.Background(), "", pageSize) {
 		if err != nil {
 			t.Fatal(err)
 		}

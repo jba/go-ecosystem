@@ -67,11 +67,14 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 // empty string or a value from an [Entry].
 // It never returns the same entry twice, even if they have the same timestamp.
 // If an error occurs, the iterator yields a nil [Entry] with a non-nil error and stops.
-func Entries(ctx context.Context, since string) iter.Seq2[*Entry, error] {
+//
+// limit is the number of entries to request per page; if it is zero, the
+// index's default page size is used.
+func Entries(ctx context.Context, since string, limit int) iter.Seq2[*Entry, error] {
 	return func(yield func(*Entry, error) bool) {
 		prevs := map[Entry]bool{} // previously seen entries at since.
 		for {
-			entries, err := Read(ctx, since, 0)
+			entries, err := Read(ctx, since, limit)
 			if err != nil {
 				yield(nil, err)
 				return
