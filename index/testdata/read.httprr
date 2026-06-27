@@ -1,0 +1,33 @@
+httprr trace v1
+112 1849
+GET https://index.golang.org/index?limit=10 HTTP/1.1
+Host: index.golang.org
+User-Agent: Go-http-client/1.1
+
+HTTP/2.0 200 OK
+Content-Length: 1168
+Accept-Ranges: bytes
+Access-Control-Allow-Headers: Range
+Access-Control-Allow-Origin: *
+Access-Control-Expose-Headers: Content-Range, Content-Length
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Cache-Control: public, max-age=300
+Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
+Content-Type: text/plain; charset=UTF-8
+Cross-Origin-Opener-Policy: same-origin
+Date: Sat, 27 Jun 2026 19:57:43 GMT
+Expires: Sat, 27 Jun 2026 20:02:43 GMT
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Xss-Protection: 0
+
+{"Path":"golang.org/x/text","Version":"v0.3.0","Timestamp":"2019-04-10T19:08:52.997264Z"}
+{"Path":"golang.org/x/crypto","Version":"v0.0.0-20190404164418-38d8ce5564a5","Timestamp":"2019-04-10T20:30:02.04035Z"}
+{"Path":"github.com/FiloSottile/mkcert","Version":"v1.3.0","Timestamp":"2019-04-10T20:30:31.325463Z"}
+{"Path":"github.com/DHowett/go-plist","Version":"v0.0.0-20180609054337-500bd5b9081b","Timestamp":"2019-04-10T20:30:36.555706Z"}
+{"Path":"software.sslmate.com/src/go-pkcs12","Version":"v0.0.0-20180114231543-2291e8f0f237","Timestamp":"2019-04-10T20:30:42.373009Z"}
+{"Path":"golang.org/x/net","Version":"v0.0.0-20180627171509-e514e69ffb8b","Timestamp":"2019-04-10T20:30:42.413493Z"}
+{"Path":"golang.org/x/exp/notary","Version":"v0.0.0-20190409044807-56b785ea58b2","Timestamp":"2019-04-10T20:37:01.409908Z"}
+{"Path":"golang.org/x/crypto","Version":"v0.0.0-20181025213731-e84da0312774","Timestamp":"2019-04-10T20:40:43.408586Z"}
+{"Path":"golang.org/x/net","Version":"v0.0.0-20181213202711-891ebc4b82d6","Timestamp":"2019-04-10T20:40:54.12906Z"}
+{"Path":"golang.org/x/sys","Version":"v0.0.0-20190306220234-b354f8bf4d9e","Timestamp":"2019-04-10T20:41:05.025346Z"}

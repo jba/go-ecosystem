@@ -1,9 +1,10 @@
 module github.com/jba/go-ecosystem
 
-go 1.24.7
+go 1.26
 
 require (
 	github.com/jba/cli v0.6.0
+	github.com/tmc/clones/httprr v0.0.0-20250312234506-dce8cd013bfb
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 	golang.org/x/mod v0.32.0
 	golang.org/x/sync v0.17.0

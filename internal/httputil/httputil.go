@@ -26,10 +26,14 @@ func ErrorStatus(err error) int {
 	return -1
 }
 
-// DoReadBody executes an HTTP request and returns the response body.
+// DoReadBody executes an HTTP request using c and returns the response body.
+// If c is nil, http.DefaultClient is used.
 // It returns an HTTPError for non-2xx status codes.
-func DoReadBody(req *http.Request) ([]byte, error) {
-	resp, err := http.DefaultClient.Do(req)
+func DoReadBody(c *http.Client, req *http.Request) ([]byte, error) {
+	if c == nil {
+		c = http.DefaultClient
+	}
+	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}

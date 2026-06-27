@@ -203,7 +203,7 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 	req.Header.Set("Disable-Module-Fetch", "true")
 	req.Header.Set("User-Agent", "jba work")
 	ncalls.Add(1)
-	return httputil.DoReadBody(req)
+	return httputil.DoReadBody(nil, req)
 }
 
 var (

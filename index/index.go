@@ -13,6 +13,10 @@ import (
 	"github.com/jba/go-ecosystem/internal/httputil"
 )
 
+// client is the HTTP client used to read the index.
+// It is a variable so tests can substitute a record/replay client.
+var client = http.DefaultClient
+
 type Entry struct {
 	Path      string
 	Version   string
@@ -41,7 +45,7 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := httputil.DoReadBody(req)
+	body, err := httputil.DoReadBody(client, req)
 	if err != nil {
 		return nil, err
 	}
