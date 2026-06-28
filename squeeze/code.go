@@ -72,7 +72,7 @@ func (s *symbolizer) split(src []byte) []huffman.Symbol {
 			}
 			tok = src[i:j]
 		case isDigit(r):
-			tok = src[i : i+size] // size == 1
+			tok = src[i : i+size] // a single digit rune
 		default:
 			if op := matchOperator(src[i:]); op != "" {
 				tok = src[i : i+len(op)]
@@ -105,18 +105,17 @@ func isIdentPart(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
-func isDigit(r rune) bool { return r >= '0' && r <= '9' }
+func isDigit(r rune) bool { return unicode.IsDigit(r) }
 
-// goOperators are the Go operator and punctuation tokens, ordered longest
-// first so that matchOperator finds the greedy match.
+// goOperators are the multi-character Go operator and punctuation tokens,
+// ordered longest first so that matchOperator finds the greedy match.
+// Single-character operators are omitted: they are covered by the default
+// single-byte case, which produces the same token text.
 var goOperators = []string{
 	"<<=", ">>=", "&^=", "...",
 	"+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
 	"<<", ">>", "&^", "&&", "||", "<-", "++", "--",
 	"==", "!=", "<=", ">=", ":=",
-	"+", "-", "*", "/", "%", "&", "|", "^",
-	"<", ">", "=", "!", "(", ")", "[", "]",
-	"{", "}", ",", ";", ".", ":", "~",
 }
 
 // matchOperator returns the longest Go operator token that is a prefix of src,
