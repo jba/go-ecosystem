@@ -222,7 +222,7 @@ func fetch(ctx context.Context, c *http.Client, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "jba work")
+	req.Header.Set("User-Agent", "github.com/jba/go-ecosystem")
 	ncalls.Add(1)
 	return httputil.DoReadBody(ctx, c, req)
 }

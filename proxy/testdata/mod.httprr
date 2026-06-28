@@ -1,8 +1,8 @@
 httprr trace v1
-135 890
+154 880
 GET https://proxy.golang.org/cached-only/github.com/jba/bitset/@v/v0.2.0.mod HTTP/1.1
 Host: proxy.golang.org
-User-Agent: jba work
+User-Agent: github.com/jba/go-ecosystem
 
 HTTP/2.0 200 OK
 Content-Length: 79
@@ -10,15 +10,14 @@ Accept-Ranges: bytes
 Access-Control-Allow-Headers: Range
 Access-Control-Allow-Origin: *
 Access-Control-Expose-Headers: Content-Range, Content-Length
-Age: 116
 Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
 Cache-Control: public, max-age=10800
 Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
 Content-Type: text/plain; charset=UTF-8
 Cross-Origin-Opener-Policy: same-origin
-Date: Sun, 28 Jun 2026 02:39:29 GMT
+Date: Sun, 28 Jun 2026 02:42:08 GMT
 Etag: "22db90ae6647552b4a3082280e8f91dc63aa5c37ac5ae90b5301c7e2629b2912"
-Expires: Sun, 28 Jun 2026 05:39:29 GMT
+Expires: Sun, 28 Jun 2026 05:42:08 GMT
 Last-Modified: Sat, 27 Jun 2026 17:06:19 GMT
 X-Content-Type-Options: nosniff
 X-Frame-Options: SAMEORIGIN
