@@ -194,7 +194,7 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 	if Debug {
 		log.Printf("proxy: Get %s", url)
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 	req.Header.Set("Disable-Module-Fetch", "true")
 	req.Header.Set("User-Agent", "jba work")
 	ncalls.Add(1)
-	return httputil.DoReadBody(nil, req)
+	return httputil.DoReadBody(ctx, nil, req)
 }
 
 var (

@@ -2,6 +2,7 @@
 package httputil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -27,13 +28,14 @@ func ErrorStatus(err error) int {
 }
 
 // DoReadBody executes an HTTP request using c and returns the response body.
+// The request is performed with the given context.
 // If c is nil, http.DefaultClient is used.
 // It returns an HTTPError for non-2xx status codes.
-func DoReadBody(c *http.Client, req *http.Request) ([]byte, error) {
+func DoReadBody(ctx context.Context, c *http.Client, req *http.Request) ([]byte, error) {
 	if c == nil {
 		c = http.DefaultClient
 	}
-	resp, err := c.Do(req)
+	resp, err := c.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
