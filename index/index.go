@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"iter"
 	"net/http"
-	"strings"
+	"net/url"
+	"strconv"
 
 	"github.com/jba/go-ecosystem/internal/httputil"
 )
@@ -32,18 +33,18 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 // read is the implementation of [Read], with an explicit HTTP client so tests
 // can substitute a record/replay client.
 func read(ctx context.Context, c *http.Client, since string, limit int) ([]*Entry, error) {
-	url := "https://index.golang.org/index"
-	var params []string
+	u := "https://index.golang.org/index"
+	params := url.Values{}
 	if since != "" {
-		params = append(params, "since="+since)
+		params.Set("since", since)
 	}
 	if limit > 0 {
-		params = append(params, fmt.Sprintf("limit=%d", limit))
+		params.Set("limit", strconv.Itoa(limit))
 	}
 	if len(params) > 0 {
-		url += "?" + strings.Join(params, "&")
+		u += "?" + params.Encode()
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return nil, err
 	}

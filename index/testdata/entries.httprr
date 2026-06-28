@@ -15,8 +15,8 @@ Cache-Control: public, max-age=300
 Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
 Content-Type: text/plain; charset=UTF-8
 Cross-Origin-Opener-Policy: same-origin
-Date: Sat, 27 Jun 2026 20:12:27 GMT
-Expires: Sat, 27 Jun 2026 20:17:27 GMT
+Date: Sun, 28 Jun 2026 11:09:22 GMT
+Expires: Sun, 28 Jun 2026 11:14:22 GMT
 X-Content-Type-Options: nosniff
 X-Frame-Options: SAMEORIGIN
 X-Xss-Protection: 0
@@ -121,8 +121,8 @@ X-Xss-Protection: 0
 {"Path":"github.com/census-instrumentation/opencensus-proto","Version":"v0.1.0","Timestamp":"2019-04-11T14:32:41.172484Z"}
 {"Path":"github.com/hashicorp/vault-plugin-auth-azure","Version":"v0.0.0-20181207232528-4c0b46069a22","Timestamp":"2019-04-11T14:32:42.831485Z"}
 {"Path":"golang.org/x/time","Version":"v0.0.0-20181108054448-85acf8d2951c","Timestamp":"2019-04-11T14:32:43.184602Z"}
-147 12303
-GET https://index.golang.org/index?since=2019-04-11T14:32:43.184602Z&limit=100 HTTP/1.1
+151 12303
+GET https://index.golang.org/index?limit=100&since=2019-04-11T14%3A32%3A43.184602Z HTTP/1.1
 Host: index.golang.org
 User-Agent: Go-http-client/1.1
 
@@ -137,8 +137,8 @@ Cache-Control: public, max-age=300
 Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
 Content-Type: text/plain; charset=UTF-8
 Cross-Origin-Opener-Policy: same-origin
-Date: Sat, 27 Jun 2026 20:12:27 GMT
-Expires: Sat, 27 Jun 2026 20:17:27 GMT
+Date: Sun, 28 Jun 2026 11:09:22 GMT
+Expires: Sun, 28 Jun 2026 11:14:22 GMT
 X-Content-Type-Options: nosniff
 X-Frame-Options: SAMEORIGIN
 X-Xss-Protection: 0
@@ -243,8 +243,8 @@ X-Xss-Protection: 0
 {"Path":"github.com/openzipkin/zipkin-go","Version":"v0.1.1","Timestamp":"2019-04-11T14:38:41.123182Z"}
 {"Path":"golang.org/x/lint","Version":"v0.0.0-20181026193005-c67002cb31c3","Timestamp":"2019-04-11T14:38:41.19459Z"}
 {"Path":"github.com/prometheus/client_model","Version":"v0.0.0-20180712105110-5c3871d89910","Timestamp":"2019-04-11T14:38:41.588371Z"}
-147 11922
-GET https://index.golang.org/index?since=2019-04-11T14:38:41.588371Z&limit=100 HTTP/1.1
+151 11922
+GET https://index.golang.org/index?limit=100&since=2019-04-11T14%3A38%3A41.588371Z HTTP/1.1
 Host: index.golang.org
 User-Agent: Go-http-client/1.1
 
@@ -259,8 +259,8 @@ Cache-Control: public, max-age=300
 Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
 Content-Type: text/plain; charset=UTF-8
 Cross-Origin-Opener-Policy: same-origin
-Date: Sat, 27 Jun 2026 20:12:27 GMT
-Expires: Sat, 27 Jun 2026 20:17:27 GMT
+Date: Sun, 28 Jun 2026 11:09:23 GMT
+Expires: Sun, 28 Jun 2026 11:14:23 GMT
 X-Content-Type-Options: nosniff
 X-Frame-Options: SAMEORIGIN
 X-Xss-Protection: 0
