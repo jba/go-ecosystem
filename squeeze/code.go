@@ -71,7 +71,7 @@ func (s *symbolizer) split(src []byte) []huffman.Symbol {
 				j += s2
 			}
 			tok = src[i:j]
-		case isDigit(r):
+		case unicode.IsDigit(r):
 			tok = src[i : i+size] // a single digit rune
 		default:
 			if op := matchOperator(src[i:]); op != "" {
@@ -104,8 +104,6 @@ func isIdentStart(r rune) bool { return r == '_' || unicode.IsLetter(r) }
 func isIdentPart(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
-
-func isDigit(r rune) bool { return unicode.IsDigit(r) }
 
 // goOperators are the multi-character Go operator and punctuation tokens,
 // ordered longest first so that matchOperator finds the greedy match.
