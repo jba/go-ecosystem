@@ -8,12 +8,11 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/jba/go-ecosystem/internal/errs"
 	"github.com/jba/go-ecosystem/proxy"
+	"github.com/jba/go-ecosystem/zips"
 	"golang.org/x/mod/module"
 )
 
@@ -142,94 +141,12 @@ func moduleFilePath(dir string, mpath, version string) (string, error) {
 // from zr, and the go.mod file.
 func trimZip(zw *zip.Writer, zr *zip.Reader) error {
 	for _, f := range zr.File {
-		if !isSourceName(f.Name) {
+		if !zips.IsSourceName(f.Name) {
 			continue
 		}
-		if err := copyZipFile(zw, f); err != nil {
+		if err := zips.CopyZipFile(zw, f); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func copyZipFile(zw *zip.Writer, f *zip.File) error {
-	dst, err := zw.CreateHeader(&f.FileHeader)
-	if err != nil {
-		return err
-	}
-	if f.FileInfo().IsDir() {
-		return nil
-	}
-	src, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-	_, err = io.Copy(dst, src)
-	return err
-}
-
-// isSourceName reports whether name is a pathname that refers
-// to a Go source file, or a go.mod file.
-func isSourceName(name string) bool {
-	dir, file := path.Split(name)
-	// TODO(jba): check if this is a valid import path?
-	if isIgnoredByGoTool(dir) || isVendored(dir) || isGodeps(dir) {
-		return false
-	}
-	if file == "go.mod" {
-		return true
-	}
-	if path.Ext(file) == ".go" {
-		return true
-	}
-	return false
-}
-
-// isIgnoredByGoTool reports whether the given import path corresponds
-// to a directory that would be ignored by the go tool.
-//
-// The logic of the go tool for ignoring directories is documented at
-// https://golang.org/cmd/go/#hdr-Package_lists_and_patterns:
-//
-//	Directory and file names that begin with "." or "_" are ignored
-//	by the go tool, as are directories named "testdata".
-//
-// However, even though `go list` and other commands that take package
-// wildcards will ignore these, they can still be imported and used in
-// working Go programs. We continue to ignore the "." and "testdata"
-// cases, but we've seen valid Go packages with "_", so we accept those.
-//
-// Copied from pkgsite/internal/fetch.
-func isIgnoredByGoTool(importPath string) bool {
-	return pathHasElement(importPath, func(el string) bool {
-		return strings.HasPrefix(el, ".") || el == "testdata"
-	})
-}
-
-// pathHasElement reports whether pred returns true for any element of path.
-func pathHasElement(path string, pred func(string) bool) bool {
-	for _, el := range strings.Split(path, "/") {
-		if pred(el) {
-			return true
-		}
-	}
-	return false
-}
-
-// isVendored reports whether the given import path corresponds
-// to a Go package that is inside a vendor directory.
-//
-// The logic for what is considered a vendor directory is documented at
-// https://golang.org/cmd/go/#hdr-Vendor_Directories.
-//
-// Copied from pkgsite/internal/fetch.
-func isVendored(importPath string) bool {
-	return strings.HasPrefix(importPath, "vendor/") ||
-		strings.Contains(importPath, "/vendor/")
-}
-
-func isGodeps(importPath string) bool {
-	return strings.HasPrefix(importPath, "Godeps/") ||
-		strings.Contains(importPath, "/Godeps/")
 }
