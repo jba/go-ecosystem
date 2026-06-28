@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"testing"
@@ -13,7 +12,7 @@ func TestList(t *testing.T) {
 	if !*live {
 		t.Skip("skipping live test; use -live to run")
 	}
-	got, err := List(context.Background(), "github.com/jba/cli")
+	got, err := List(t.Context(), "github.com/jba/cli")
 	if err != nil {
 		t.Fatal(err)
 	}

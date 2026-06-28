@@ -2,14 +2,13 @@ package main
 
 import (
 	"archive/zip"
-	"context"
 	"path/filepath"
 	"slices"
 	"testing"
 )
 
 func TestSaveZip(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	mpath := "rsc.io/ordered"
 	version := "v1.1.1"
 	destDir := t.TempDir()

@@ -1,35 +1,31 @@
 package index
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
 	"github.com/tmc/clones/httprr"
 )
 
-// withReplayClient swaps the package's client for an httprr-backed one for the
-// duration of the test, so index.Read/Entries record or replay against
-// testdata/*.httprr instead of hitting index.golang.org for real.
+// replayClient returns an httprr-backed HTTP client that records or replays
+// against testdata/*.httprr instead of hitting index.golang.org for real.
 //
 // Record new traces with:  go test ./index -httprecord=.
-func withReplayClient(t *testing.T, file string) {
+func replayClient(t *testing.T, file string) *http.Client {
 	t.Helper()
 	rr, err := httprr.Open(file, http.DefaultTransport)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { rr.Close() })
-	saved := client
-	client = rr.Client()
-	t.Cleanup(func() { client = saved })
+	return rr.Client()
 }
 
 func TestRead(t *testing.T) {
-	withReplayClient(t, "testdata/read.httprr")
+	c := replayClient(t, "testdata/read.httprr")
 
 	const limit = 10
-	entries, err := Read(context.Background(), "", limit)
+	entries, err := read(t.Context(), c, "", limit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +43,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestEntries(t *testing.T) {
-	withReplayClient(t, "testdata/entries.httprr")
+	c := replayClient(t, "testdata/entries.httprr")
 
 	seen := map[Entry]bool{}
 	// Page 100 at a time so the test exercises pagination across several
@@ -55,7 +51,7 @@ func TestEntries(t *testing.T) {
 	const pageSize = 100
 	const want = 250 // forces at least three pages
 	n := 0
-	for e, err := range entries(context.Background(), "", pageSize) {
+	for e, err := range entries(t.Context(), c, "", pageSize) {
 		if err != nil {
 			t.Fatal(err)
 		}

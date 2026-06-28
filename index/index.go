@@ -13,10 +13,6 @@ import (
 	"github.com/jba/go-ecosystem/internal/httputil"
 )
 
-// client is the HTTP client used to read the index.
-// It is a variable so tests can substitute a record/replay client.
-var client = http.DefaultClient
-
 type Entry struct {
 	Path      string
 	Version   string
@@ -30,6 +26,12 @@ type Entry struct {
 //
 // The limit is passed on to the index unless it is zero.
 func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
+	return read(ctx, http.DefaultClient, since, limit)
+}
+
+// read is the implementation of [Read], with an explicit HTTP client so tests
+// can substitute a record/replay client.
+func read(ctx context.Context, c *http.Client, since string, limit int) ([]*Entry, error) {
 	url := "https://index.golang.org/index"
 	var params []string
 	if since != "" {
@@ -45,7 +47,7 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := httputil.DoReadBody(client, req)
+	body, err := httputil.DoReadBody(c, req)
 	if err != nil {
 		return nil, err
 	}
@@ -68,18 +70,18 @@ func Read(ctx context.Context, since string, limit int) ([]*Entry, error) {
 // It never returns the same entry twice, even if they have the same timestamp.
 // If an error occurs, the iterator yields a nil [Entry] with a non-nil error and stops.
 func Entries(ctx context.Context, since string) iter.Seq2[*Entry, error] {
-	return entries(ctx, since, 0)
+	return entries(ctx, http.DefaultClient, since, 0)
 }
 
-// entries is the implementation of [Entries], with an additional limit
-// parameter giving the number of entries to request per page. If limit is
-// zero, the index's default page size is used. It exists so tests can use a
-// small page size.
-func entries(ctx context.Context, since string, limit int) iter.Seq2[*Entry, error] {
+// entries is the implementation of [Entries], with an explicit HTTP client and
+// an additional limit parameter giving the number of entries to request per
+// page. If limit is zero, the index's default page size is used. These exist
+// so tests can use a record/replay client and a small page size.
+func entries(ctx context.Context, c *http.Client, since string, limit int) iter.Seq2[*Entry, error] {
 	return func(yield func(*Entry, error) bool) {
 		prevs := map[Entry]bool{} // previously seen entries at since.
 		for {
-			entries, err := Read(ctx, since, limit)
+			entries, err := read(ctx, c, since, limit)
 			if err != nil {
 				yield(nil, err)
 				return
