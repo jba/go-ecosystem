@@ -9,10 +9,9 @@
 package versions
 
 import (
-	"log"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/mod/module"
 	"golang.org/x/mod/semver"
 )
@@ -88,7 +87,6 @@ func Latest(versions []string, hasGoMod func(v string) (bool, error)) (v string,
 	latestCompat := LatestOf(compats)
 	if latestCompat == "" {
 		// No compatible versions; use the latest (incompatible) version.
-		log.Printf("using latest incompatible version")
 		return latest, nil
 	}
 	latestCompatHasGoMod, err := hasGoMod(latestCompat)
