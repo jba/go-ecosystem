@@ -59,13 +59,13 @@ func IsSourceName(name string) bool {
 //
 // Copied from pkgsite/internal/fetch.
 func IsIgnoredByGoTool(importPath string) bool {
-	return PathHasElement(importPath, func(el string) bool {
+	return pathHasElement(importPath, func(el string) bool {
 		return strings.HasPrefix(el, ".") || el == "testdata"
 	})
 }
 
-// PathHasElement reports whether pred returns true for any element of path.
-func PathHasElement(path string, pred func(string) bool) bool {
+// pathHasElement reports whether pred returns true for any element of path.
+func pathHasElement(path string, pred func(string) bool) bool {
 	for _, el := range strings.Split(path, "/") {
 		if pred(el) {
 			return true
