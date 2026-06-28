@@ -222,9 +222,6 @@ func fetch(ctx context.Context, c *http.Client, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Setting this header to true prevents the proxy from fetching uncached
-	// modules.
-	req.Header.Set("Disable-Module-Fetch", "true")
 	req.Header.Set("User-Agent", "jba work")
 	ncalls.Add(1)
 	return httputil.DoReadBody(ctx, c, req)

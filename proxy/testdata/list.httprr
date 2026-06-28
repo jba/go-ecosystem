@@ -1,9 +1,8 @@
 httprr trace v1
-157 699
+129 699
 GET https://proxy.golang.org/cached-only/github.com/jba/bitset/@v/list HTTP/1.1
 Host: proxy.golang.org
 User-Agent: jba work
-Disable-Module-Fetch: true
 
 HTTP/2.0 200 OK
 Content-Length: 21
@@ -16,8 +15,8 @@ Cache-Control: public, max-age=60
 Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
 Content-Type: text/plain; charset=UTF-8
 Cross-Origin-Opener-Policy: same-origin
-Date: Sun, 28 Jun 2026 02:39:29 GMT
-Expires: Sun, 28 Jun 2026 02:40:29 GMT
+Date: Sun, 28 Jun 2026 02:41:25 GMT
+Expires: Sun, 28 Jun 2026 02:42:25 GMT
 X-Content-Type-Options: nosniff
 X-Frame-Options: SAMEORIGIN
 X-Xss-Protection: 0

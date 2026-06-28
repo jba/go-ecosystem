@@ -1,9 +1,8 @@
 httprr trace v1
-164 859
+136 869
 GET https://proxy.golang.org/cached-only/github.com/jba/bitset/@v/v0.2.0.info HTTP/1.1
 Host: proxy.golang.org
 User-Agent: jba work
-Disable-Module-Fetch: true
 
 HTTP/2.0 200 OK
 Content-Length: 186
@@ -11,6 +10,7 @@ Accept-Ranges: bytes
 Access-Control-Allow-Headers: Range
 Access-Control-Allow-Origin: *
 Access-Control-Expose-Headers: Content-Range, Content-Length
+Age: 116
 Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
 Cache-Control: public, max-age=10800
 Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
