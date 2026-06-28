@@ -218,13 +218,13 @@ func fetch(ctx context.Context, c *http.Client, url string) ([]byte, error) {
 	if Debug {
 		log.Printf("proxy: Get %s", url)
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "github.com/jba/go-ecosystem")
 	ncalls.Add(1)
-	return httputil.DoReadBody(ctx, c, req)
+	return httputil.DoReadBody(c, req)
 }
 
 var (

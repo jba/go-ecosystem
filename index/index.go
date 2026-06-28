@@ -43,11 +43,11 @@ func read(ctx context.Context, c *http.Client, since string, limit int) ([]*Entr
 	if len(params) > 0 {
 		url += "?" + strings.Join(params, "&")
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	body, err := httputil.DoReadBody(ctx, c, req)
+	body, err := httputil.DoReadBody(c, req)
 	if err != nil {
 		return nil, err
 	}
