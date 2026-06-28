@@ -50,7 +50,7 @@ type symbolizer struct {
 // The tokens are, in priority order:
 //   - a valid Go identifier (a Unicode letter or '_' followed by letters,
 //     digits, or '_'), even if it includes digits;
-//   - a single decimal digit;
+//   - a single digit;
 //   - a Go operator or punctuation token (none of which contain letters or
 //     digits), matched greedily so longer tokens win (e.g. "<<=" over "<<");
 //   - a single whitespace character;
