@@ -14,19 +14,10 @@ import (
 // symbols are the distinct Go tokens appearing in those files, and their
 // frequencies are the number of times each token occurs.
 func buildCode(zr *zip.Reader) (*huffman.Code, error) {
-	// Assign each distinct token text a dense symbol index, and count how
-	// often each occurs.
-	syms := map[string]huffman.Symbol{}
-	var freqs []int
-	tally := func(s string) {
-		sym, ok := syms[s]
-		if !ok {
-			sym = huffman.Symbol(len(freqs))
-			syms[s] = sym
-			freqs = append(freqs, 0)
-		}
-		freqs[sym]++
-	}
+	// A symbolizer assigns each distinct token text a dense symbol index. The
+	// same instance is shared across all files so symbols are consistent.
+	sym := &symbolizer{index: map[string]huffman.Symbol{}}
+	cb := huffman.NewCodeBuilder(sym.split)
 
 	for _, f := range zr.File {
 		if path.Ext(f.Name) != ".go" {
@@ -36,24 +27,34 @@ func buildCode(zr *zip.Reader) (*huffman.Code, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := tokenize(f.Name, src, tally); err != nil {
+		sym.filename = f.Name
+		if _, err := cb.Write(src); err != nil {
 			return nil, err
 		}
 	}
-	return huffman.NewCode(freqs)
+	return cb.Code()
 }
 
-// tokenize scans the Go source src, calling emit with the text of each token.
-func tokenize(filename string, src []byte, emit func(string)) error {
+// A symbolizer maps Go token texts to dense [huffman.Symbol] indices.
+type symbolizer struct {
+	index    map[string]huffman.Symbol
+	filename string // name of the file currently being split, for the scanner
+}
+
+// split tokenizes Go source and returns the symbol for each token. It satisfies
+// [huffman.SplitFunc].
+func (s *symbolizer) split(src []byte) []huffman.Symbol {
 	fset := token.NewFileSet()
-	file := fset.AddFile(filename, fset.Base(), len(src))
-	var s scanner.Scanner
+	file := fset.AddFile(s.filename, fset.Base(), len(src))
+	var sc scanner.Scanner
 	// Suppress error handling: we tokenize on a best-effort basis.
-	s.Init(file, src, nil, scanner.ScanComments)
+	sc.Init(file, src, nil, scanner.ScanComments)
+
+	var syms []huffman.Symbol
 	for {
-		_, tok, lit := s.Scan()
+		_, tok, lit := sc.Scan()
 		if tok == token.EOF {
-			return nil
+			return syms
 		}
 		// Literal-bearing tokens (identifiers, numbers, strings, comments)
 		// carry their text in lit; operators and keywords use the token's
@@ -62,8 +63,19 @@ func tokenize(filename string, src []byte, emit func(string)) error {
 		if text == "" {
 			text = tok.String()
 		}
-		emit(text)
+		syms = append(syms, s.symbol(text))
 	}
+}
+
+// symbol returns the symbol for the given token text, assigning a new one if
+// necessary.
+func (s *symbolizer) symbol(text string) huffman.Symbol {
+	sym, ok := s.index[text]
+	if !ok {
+		sym = huffman.Symbol(len(s.index))
+		s.index[text] = sym
+	}
+	return sym
 }
 
 func readZipFile(f *zip.File) ([]byte, error) {
