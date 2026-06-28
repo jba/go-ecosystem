@@ -26,108 +26,6 @@ func matchOperatorBytes(src []byte) string {
 	return ""
 }
 
-// matchOperatorSwitch dispatches on the first byte, then checks only the
-// operators that can begin with it. Operators within a case are ordered
-// longest-first to preserve greedy matching.
-func matchOperatorSwitch(src []byte) string {
-	if len(src) == 0 {
-		return ""
-	}
-	has := func(s string) bool { return len(src) >= len(s) && string(src[:len(s)]) == s }
-	switch src[0] {
-	case '<':
-		if has("<<=") {
-			return "<<="
-		}
-		if has("<<") {
-			return "<<"
-		}
-		if has("<-") {
-			return "<-"
-		}
-		if has("<=") {
-			return "<="
-		}
-	case '>':
-		if has(">>=") {
-			return ">>="
-		}
-		if has(">>") {
-			return ">>"
-		}
-		if has(">=") {
-			return ">="
-		}
-	case '&':
-		if has("&^=") {
-			return "&^="
-		}
-		if has("&^") {
-			return "&^"
-		}
-		if has("&&") {
-			return "&&"
-		}
-		if has("&=") {
-			return "&="
-		}
-	case '.':
-		if has("...") {
-			return "..."
-		}
-	case '+':
-		if has("+=") {
-			return "+="
-		}
-		if has("++") {
-			return "++"
-		}
-	case '-':
-		if has("-=") {
-			return "-="
-		}
-		if has("--") {
-			return "--"
-		}
-	case '*':
-		if has("*=") {
-			return "*="
-		}
-	case '/':
-		if has("/=") {
-			return "/="
-		}
-	case '%':
-		if has("%=") {
-			return "%="
-		}
-	case '|':
-		if has("|=") {
-			return "|="
-		}
-		if has("||") {
-			return "||"
-		}
-	case '^':
-		if has("^=") {
-			return "^="
-		}
-	case '=':
-		if has("==") {
-			return "=="
-		}
-	case '!':
-		if has("!=") {
-			return "!="
-		}
-	case ':':
-		if has(":=") {
-			return ":="
-		}
-	}
-	return ""
-}
-
 // benchInputs exercises the matchers: hits at various positions in the operator
 // list (best/worst case), and a miss (the common case for arbitrary source).
 var benchInputs = [][]byte{
@@ -158,19 +56,9 @@ func BenchmarkMatchOperatorBytes(b *testing.B) {
 	_ = sink
 }
 
-func BenchmarkMatchOperatorSwitch(b *testing.B) {
-	var sink string
-	for b.Loop() {
-		for _, in := range benchInputs {
-			sink = matchOperatorSwitch(in)
-		}
-	}
-	_ = sink
-}
-
-// TestMatchOperatorVariantsAgree checks that the alternative implementations
-// produce the same result as matchOperator for a range of inputs.
-func TestMatchOperatorVariantsAgree(t *testing.T) {
+// TestMatchOperatorBytesAgrees checks that the byte-slice variant produces the
+// same result as matchOperator for a range of inputs.
+func TestMatchOperatorBytesAgrees(t *testing.T) {
 	var inputs [][]byte
 	for _, op := range goOperators {
 		inputs = append(inputs, []byte(op), []byte(op+"x"))
@@ -183,9 +71,6 @@ func TestMatchOperatorVariantsAgree(t *testing.T) {
 		want := matchOperator(in)
 		if got := matchOperatorBytes(in); got != want {
 			t.Errorf("matchOperatorBytes(%q) = %q, want %q", in, got, want)
-		}
-		if got := matchOperatorSwitch(in); got != want {
-			t.Errorf("matchOperatorSwitch(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

@@ -105,10 +105,12 @@ func isIdentPart(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
-// goOperators are the multi-character Go operator and punctuation tokens,
-// ordered longest first so that matchOperator finds the greedy match.
-// Single-character operators are omitted: they are covered by the default
-// single-byte case, which produces the same token text.
+// goOperators are the multi-character Go operator and punctuation tokens that
+// [matchOperator] recognizes, ordered longest first. Single-character operators
+// are omitted: they are covered by the default single-byte case, which produces
+// the same token text. matchOperator does not iterate this slice (it switches
+// on the first byte instead); it is kept as documentation and is used by tests
+// and benchmarks.
 var goOperators = []string{
 	"<<=", ">>=", "&^=", "...",
 	"+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
@@ -116,12 +118,104 @@ var goOperators = []string{
 	"==", "!=", "<=", ">=", ":=",
 }
 
-// matchOperator returns the longest Go operator token that is a prefix of src,
-// or "" if none is.
+// matchOperator returns the longest multi-character Go operator token that is a
+// prefix of src, or "" if none is. It dispatches on the first byte and then
+// checks only the operators that can begin with it, longest-first to preserve
+// greedy matching.
 func matchOperator(src []byte) string {
-	for _, op := range goOperators {
-		if len(src) >= len(op) && string(src[:len(op)]) == op {
-			return op
+	if len(src) == 0 {
+		return ""
+	}
+	has := func(s string) bool { return len(src) >= len(s) && string(src[:len(s)]) == s }
+	switch src[0] {
+	case '<':
+		if has("<<=") {
+			return "<<="
+		}
+		if has("<<") {
+			return "<<"
+		}
+		if has("<-") {
+			return "<-"
+		}
+		if has("<=") {
+			return "<="
+		}
+	case '>':
+		if has(">>=") {
+			return ">>="
+		}
+		if has(">>") {
+			return ">>"
+		}
+		if has(">=") {
+			return ">="
+		}
+	case '&':
+		if has("&^=") {
+			return "&^="
+		}
+		if has("&^") {
+			return "&^"
+		}
+		if has("&&") {
+			return "&&"
+		}
+		if has("&=") {
+			return "&="
+		}
+	case '.':
+		if has("...") {
+			return "..."
+		}
+	case '+':
+		if has("+=") {
+			return "+="
+		}
+		if has("++") {
+			return "++"
+		}
+	case '-':
+		if has("-=") {
+			return "-="
+		}
+		if has("--") {
+			return "--"
+		}
+	case '*':
+		if has("*=") {
+			return "*="
+		}
+	case '/':
+		if has("/=") {
+			return "/="
+		}
+	case '%':
+		if has("%=") {
+			return "%="
+		}
+	case '|':
+		if has("|=") {
+			return "|="
+		}
+		if has("||") {
+			return "||"
+		}
+	case '^':
+		if has("^=") {
+			return "^="
+		}
+	case '=':
+		if has("==") {
+			return "=="
+		}
+	case '!':
+		if has("!=") {
+			return "!="
+		}
+	case ':':
+		if has(":=") {
+			return ":="
 		}
 	}
 	return ""
