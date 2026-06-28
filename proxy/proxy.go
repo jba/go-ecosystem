@@ -261,8 +261,8 @@ func fetchCached(ctx context.Context, surl string) ([]byte, error) {
 	return bytes, fetchErr
 }
 
-var debugf func(format string, args ...any) = func(format string, args ...any) {}
-
-func logDebugf(format string, args ...any) {
-	log.Printf("proxy: "+format, args...)
+func debugf(format string, args ...any) {
+	if Debug {
+		log.Printf("proxy: "+format, args...)
+	}
 }
