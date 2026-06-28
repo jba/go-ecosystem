@@ -81,17 +81,29 @@ type Origin struct {
 	Hash string
 }
 
-func Info(ctx context.Context, path, version string) (_ *InfoEntry, err error) {
+func Info(ctx context.Context, path, version string) (*InfoEntry, error) {
+	return info(ctx, http.DefaultClient, path, version)
+}
+
+// info is the implementation of [Info], with an explicit HTTP client so tests
+// can substitute a record/replay client.
+func info(ctx context.Context, c *http.Client, path, version string) (_ *InfoEntry, err error) {
 	debugf("Info %s %s", path, version)
 	defer errs.Wrap(&err, "proxy.Info(%q, %q)", path, version)
 	url, err := proxyVersionURL(path, version, ".info")
 	if err != nil {
 		return nil, err
 	}
-	return fetchInfoEntry(ctx, url)
+	return fetchInfoEntry(ctx, c, url)
 }
 
-func Latest(ctx context.Context, path string) (_ string, err error) {
+func Latest(ctx context.Context, path string) (string, error) {
+	return latest(ctx, http.DefaultClient, path)
+}
+
+// latest is the implementation of [Latest], with an explicit HTTP client so
+// tests can substitute a record/replay client.
+func latest(ctx context.Context, c *http.Client, path string) (_ string, err error) {
 	debugf("Latest %s", path)
 	defer errs.Wrap(&err, "proxy.Latest(%q)", path)
 	url, err := proxyPathURL(path)
@@ -99,15 +111,15 @@ func Latest(ctx context.Context, path string) (_ string, err error) {
 		return "", err
 	}
 	url += "/@latest"
-	entry, err := fetchInfoEntry(ctx, url)
+	entry, err := fetchInfoEntry(ctx, c, url)
 	if err != nil {
 		return "", err
 	}
 	return entry.Version, nil
 }
 
-func fetchInfoEntry(ctx context.Context, url string) (*InfoEntry, error) {
-	data, err := fetchCached(ctx, url)
+func fetchInfoEntry(ctx context.Context, c *http.Client, url string) (*InfoEntry, error) {
+	data, err := fetchCached(ctx, c, url)
 	if err != nil {
 		return nil, err
 	}
@@ -118,17 +130,29 @@ func fetchInfoEntry(ctx context.Context, url string) (*InfoEntry, error) {
 	return &res, nil
 }
 
-func Mod(ctx context.Context, path, version string) (_ []byte, err error) {
+func Mod(ctx context.Context, path, version string) ([]byte, error) {
+	return mod(ctx, http.DefaultClient, path, version)
+}
+
+// mod is the implementation of [Mod], with an explicit HTTP client so tests
+// can substitute a record/replay client.
+func mod(ctx context.Context, c *http.Client, path, version string) (_ []byte, err error) {
 	debugf("Mod %s %s", path, version)
 	defer errs.Wrap(&err, "proxy.Mod(%q, %q)", path, version)
 	url, err := proxyVersionURL(path, version, ".mod")
 	if err != nil {
 		return nil, err
 	}
-	return fetchCached(ctx, url)
+	return fetchCached(ctx, c, url)
 }
 
-func List(ctx context.Context, path string) (_ []string, err error) {
+func List(ctx context.Context, path string) ([]string, error) {
+	return list(ctx, http.DefaultClient, path)
+}
+
+// list is the implementation of [List], with an explicit HTTP client so tests
+// can substitute a record/replay client.
+func list(ctx context.Context, c *http.Client, path string) (_ []string, err error) {
 	debugf("List %s", path)
 	defer errs.Wrap(&err, "proxy.List(%q)", path)
 	url, err := proxyPathURL(path)
@@ -136,7 +160,7 @@ func List(ctx context.Context, path string) (_ []string, err error) {
 		return nil, err
 	}
 	url += "/@v/list"
-	data, err := fetchCached(ctx, url)
+	data, err := fetchCached(ctx, c, url)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +182,7 @@ func ZipData(ctx context.Context, path, version string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fetch(ctx, url)
+	return fetch(ctx, http.DefaultClient, url)
 }
 
 func proxyPathURL(modPath string) (string, error) {
@@ -181,7 +205,7 @@ func proxyVersionURL(modPath, version, suffix string) (string, error) {
 	return u + "/@v/" + v + suffix, nil
 }
 
-func fetch(ctx context.Context, url string) ([]byte, error) {
+func fetch(ctx context.Context, c *http.Client, url string) ([]byte, error) {
 	mu.Lock()
 	lim := limiter
 	if start.IsZero() {
@@ -203,7 +227,7 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 	req.Header.Set("Disable-Module-Fetch", "true")
 	req.Header.Set("User-Agent", "jba work")
 	ncalls.Add(1)
-	return httputil.DoReadBody(ctx, nil, req)
+	return httputil.DoReadBody(ctx, c, req)
 }
 
 var (
@@ -219,7 +243,7 @@ func init() {
 
 var cacheTTL = 24 * time.Hour
 
-func fetchCached(ctx context.Context, surl string) ([]byte, error) {
+func fetchCached(ctx context.Context, c *http.Client, surl string) ([]byte, error) {
 	filename := filepath.Join(cacheDir, url.PathEscape(surl))
 	if cacheEnabled {
 		finfo, fetchErr := os.Stat(filename)
@@ -242,7 +266,7 @@ func fetchCached(ctx context.Context, surl string) ([]byte, error) {
 		}
 	}
 	var fileBytes []byte
-	bytes, fetchErr := fetch(ctx, surl)
+	bytes, fetchErr := fetch(ctx, c, surl)
 	if fetchErr != nil {
 		var herr *httputil.HTTPError
 		if errors.As(fetchErr, &herr) {

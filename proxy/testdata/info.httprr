@@ -1,0 +1,25 @@
+httprr trace v1
+164 859
+GET https://proxy.golang.org/cached-only/github.com/jba/bitset/@v/v0.2.0.info HTTP/1.1
+Host: proxy.golang.org
+User-Agent: jba work
+Disable-Module-Fetch: true
+
+HTTP/2.0 200 OK
+Content-Length: 186
+Accept-Ranges: bytes
+Access-Control-Allow-Headers: Range
+Access-Control-Allow-Origin: *
+Access-Control-Expose-Headers: Content-Range, Content-Length
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Cache-Control: public, max-age=10800
+Content-Security-Policy-Report-Only: script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/goa-fa2dfb7c_2
+Content-Type: application/json
+Cross-Origin-Opener-Policy: same-origin
+Date: Sun, 28 Jun 2026 02:39:29 GMT
+Expires: Sun, 28 Jun 2026 05:39:29 GMT
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Xss-Protection: 0
+
+{"Version":"v0.2.0","Time":"2026-06-24T13:56:46Z","Origin":{"VCS":"git","URL":"https://github.com/jba/bitset","Hash":"c0d71d62a6341c54dbba4635a5b3f738249c4130","Ref":"refs/tags/v0.2.0"}}
