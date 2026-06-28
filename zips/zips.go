@@ -31,7 +31,7 @@ func CopyZipFile(zw *zip.Writer, f *zip.File) error {
 func IsSourceName(name string) bool {
 	dir, file := path.Split(name)
 	// TODO(jba): check if this is a valid import path?
-	if IsIgnoredByGoTool(dir) || IsVendored(dir) || IsGodeps(dir) {
+	if isIgnoredByGoTool(dir) || isVendored(dir) || isGodeps(dir) {
 		return false
 	}
 	if file == "go.mod" {
@@ -43,7 +43,7 @@ func IsSourceName(name string) bool {
 	return false
 }
 
-// IsIgnoredByGoTool reports whether the given import path corresponds
+// isIgnoredByGoTool reports whether the given import path corresponds
 // to a directory that would be ignored by the go tool.
 //
 // The logic of the go tool for ignoring directories is documented at
@@ -58,7 +58,7 @@ func IsSourceName(name string) bool {
 // cases, but we've seen valid Go packages with "_", so we accept those.
 //
 // Copied from pkgsite/internal/fetch.
-func IsIgnoredByGoTool(importPath string) bool {
+func isIgnoredByGoTool(importPath string) bool {
 	return pathHasElement(importPath, func(el string) bool {
 		return strings.HasPrefix(el, ".") || el == "testdata"
 	})
@@ -74,21 +74,21 @@ func pathHasElement(path string, pred func(string) bool) bool {
 	return false
 }
 
-// IsVendored reports whether the given import path corresponds
+// isVendored reports whether the given import path corresponds
 // to a Go package that is inside a vendor directory.
 //
 // The logic for what is considered a vendor directory is documented at
 // https://golang.org/cmd/go/#hdr-Vendor_Directories.
 //
 // Copied from pkgsite/internal/fetch.
-func IsVendored(importPath string) bool {
+func isVendored(importPath string) bool {
 	return strings.HasPrefix(importPath, "vendor/") ||
 		strings.Contains(importPath, "/vendor/")
 }
 
-// IsGodeps reports whether the given import path corresponds to a Go package
+// isGodeps reports whether the given import path corresponds to a Go package
 // that is inside a Godeps directory.
-func IsGodeps(importPath string) bool {
+func isGodeps(importPath string) bool {
 	return strings.HasPrefix(importPath, "Godeps/") ||
 		strings.Contains(importPath, "/Godeps/")
 }
