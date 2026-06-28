@@ -7,6 +7,7 @@ import (
 	"io"
 	"path"
 
+	"github.com/jba/go-ecosystem/zips"
 	"github.com/jba/huffman"
 )
 
@@ -20,7 +21,9 @@ func buildCode(zr *zip.Reader) (*huffman.Code, error) {
 	cb := huffman.NewCodeBuilder(sym.split)
 
 	for _, f := range zr.File {
-		if path.Ext(f.Name) != ".go" {
+		// Only Go source files; go.mod is a source file per zips.IsSourceName
+		// but is not Go code, so exclude it.
+		if !zips.IsSourceName(f.Name) || path.Base(f.Name) == "go.mod" {
 			continue
 		}
 		src, err := readZipFile(f)
