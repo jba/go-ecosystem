@@ -2,21 +2,21 @@ package squeeze
 
 import (
 	"archive/zip"
-	"go/scanner"
-	"go/token"
 	"io"
 	"path"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/jba/go-ecosystem/zips"
 	"github.com/jba/huffman"
 )
 
 // buildCode builds a Huffman code from all the .go files in zr. The code's
-// symbols are the distinct Go tokens appearing in those files, and their
-// frequencies are the number of times each token occurs.
+// symbols are produced by tokenizing the source (see [symbolizer.split]), and
+// their frequencies are the number of times each token occurs.
 func buildCode(zr *zip.Reader) (*huffman.Code, error) {
-	// A symbolizer assigns each distinct token text a dense symbol index. The
-	// same instance is shared across all files so symbols are consistent.
+	// A symbolizer assigns each distinct token a dense symbol index. The same
+	// instance is shared across all files so symbols are consistent.
 	sym := &symbolizer{index: map[string]huffman.Symbol{}}
 	cb := huffman.NewCodeBuilder(sym.split)
 
@@ -30,7 +30,6 @@ func buildCode(zr *zip.Reader) (*huffman.Code, error) {
 		if err != nil {
 			return nil, err
 		}
-		sym.filename = f.Name
 		if _, err := cb.Write(src); err != nil {
 			return nil, err
 		}
@@ -38,36 +37,55 @@ func buildCode(zr *zip.Reader) (*huffman.Code, error) {
 	return cb.Code()
 }
 
-// A symbolizer maps Go token texts to dense [huffman.Symbol] indices.
+// A symbolizer maps token texts to dense [huffman.Symbol] indices.
 type symbolizer struct {
-	index    map[string]huffman.Symbol
-	filename string // name of the file currently being split, for the scanner
+	index map[string]huffman.Symbol
 }
 
-// split tokenizes Go source and returns the symbol for each token. It satisfies
-// [huffman.SplitFunc].
+// split splits Go source into symbols. It satisfies [huffman.SplitFunc].
+//
+// The split is lossless and never fails: concatenating the texts of the
+// returned symbols always reproduces src exactly, for any input bytes.
+//
+// The tokens are, in priority order:
+//   - a valid Go identifier (a Unicode letter or '_' followed by letters,
+//     digits, or '_'), even if it includes digits;
+//   - a single decimal digit;
+//   - a Go operator or punctuation token (none of which contain letters or
+//     digits), matched greedily so longer tokens win (e.g. "<<=" over "<<");
+//   - a single whitespace character;
+//   - any other single byte.
 func (s *symbolizer) split(src []byte) []huffman.Symbol {
-	fset := token.NewFileSet()
-	file := fset.AddFile(s.filename, fset.Base(), len(src))
-	var sc scanner.Scanner
-	// Suppress error handling: we tokenize on a best-effort basis.
-	sc.Init(file, src, nil, scanner.ScanComments)
-
 	var syms []huffman.Symbol
-	for {
-		_, tok, lit := sc.Scan()
-		if tok == token.EOF {
-			return syms
+	for i := 0; i < len(src); {
+		r, size := utf8.DecodeRune(src[i:])
+		var tok []byte
+		switch {
+		case isIdentStart(r):
+			j := i + size
+			for j < len(src) {
+				r2, s2 := utf8.DecodeRune(src[j:])
+				if !isIdentPart(r2) {
+					break
+				}
+				j += s2
+			}
+			tok = src[i:j]
+		case isDigit(r):
+			tok = src[i : i+size] // size == 1
+		default:
+			if op := matchOperator(src[i:]); op != "" {
+				tok = src[i : i+len(op)]
+			} else if unicode.IsSpace(r) {
+				tok = src[i : i+size]
+			} else {
+				tok = src[i : i+1] // any other single byte
+			}
 		}
-		// Literal-bearing tokens (identifiers, numbers, strings, comments)
-		// carry their text in lit; operators and keywords use the token's
-		// canonical string.
-		text := lit
-		if text == "" {
-			text = tok.String()
-		}
-		syms = append(syms, s.symbol(text))
+		syms = append(syms, s.symbol(string(tok)))
+		i += len(tok)
 	}
+	return syms
 }
 
 // symbol returns the symbol for the given token text, assigning a new one if
@@ -79,6 +97,37 @@ func (s *symbolizer) symbol(text string) huffman.Symbol {
 		s.index[text] = sym
 	}
 	return sym
+}
+
+func isIdentStart(r rune) bool { return r == '_' || unicode.IsLetter(r) }
+
+func isIdentPart(r rune) bool {
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func isDigit(r rune) bool { return r >= '0' && r <= '9' }
+
+// goOperators are the Go operator and punctuation tokens, ordered longest
+// first so that matchOperator finds the greedy match.
+var goOperators = []string{
+	"<<=", ">>=", "&^=", "...",
+	"+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
+	"<<", ">>", "&^", "&&", "||", "<-", "++", "--",
+	"==", "!=", "<=", ">=", ":=",
+	"+", "-", "*", "/", "%", "&", "|", "^",
+	"<", ">", "=", "!", "(", ")", "[", "]",
+	"{", "}", ",", ";", ".", ":", "~",
+}
+
+// matchOperator returns the longest Go operator token that is a prefix of src,
+// or "" if none is.
+func matchOperator(src []byte) string {
+	for _, op := range goOperators {
+		if len(src) >= len(op) && string(src[:len(op)]) == op {
+			return op
+		}
+	}
+	return ""
 }
 
 func readZipFile(f *zip.File) ([]byte, error) {
