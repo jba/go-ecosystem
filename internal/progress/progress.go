@@ -5,6 +5,7 @@ package progress
 import (
 	"fmt"
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -32,8 +33,8 @@ func (i Info) String() string {
 type Tracker struct {
 	done       atomic.Int64
 	doneRecent atomic.Int64
-	stopped    bool
 	stopc      chan struct{}
+	stopOnce   sync.Once
 }
 
 // Did marks n units of work as done.
@@ -47,9 +48,8 @@ func (t *Tracker) Did(n int) {
 // Stop ends tracking. Call it to free resources allocated by [Start].
 // Stop can be called multiple times.
 func (t *Tracker) Stop() {
-	if t != nil && !t.stopped {
-		close(t.stopc)
-		t.stopped = true
+	if t != nil {
+		t.stopOnce.Do(func() { close(t.stopc) })
 	}
 }
 
@@ -73,7 +73,7 @@ func Start(total int, interval time.Duration, report func(Info)) *Tracker {
 			case <-ticker.C:
 				info := Info{Total: total}
 				info.Done = int(t.done.Load())
-				info.DoneRecent = int(t.doneRecent.Load())
+				info.DoneRecent = int(t.doneRecent.Swap(0))
 				info.Rate = float64(info.Done) / time.Since(start).Seconds()
 				info.RateRecent = float64(info.DoneRecent) / time.Since(lastReport).Seconds()
 				if total >= 0 {
@@ -81,7 +81,6 @@ func Start(total int, interval time.Duration, report func(Info)) *Tracker {
 				}
 				report(info)
 				lastReport = time.Now()
-				t.doneRecent.Store(0)
 			case <-t.stopc:
 				return
 			}
